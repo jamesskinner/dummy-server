@@ -19,6 +19,12 @@ const CALL_HTTP2_SERVICE = process.env.CALL_HTTP2_SERVICE || false
 const HTTP1_SERVICE_URL = process.env.HTTP1_SERVICE_URL || `http://localhost:${PORT}`
 const HTTP2_SERVICE_URL = process.env.HTTP2_SERVICE_URL || `http://localhost:${PORT}`
 const LISTEN_HTTP2 = (process.env.LISTEN_HTTP2 == 'true')
+const HTTPS_ENABLED = process.env.HTTPS_ENABLED == 'true'
+
+const httpsOptions = {
+  key: fs.readFileSync('data/key.pem'),
+  cert: fs.readFileSync('data/cert.pem')
+};
 
 function t(){
   return (new Date()).toISOString()
@@ -55,7 +61,7 @@ if(CALL_HTTP2_SERVICE){
 }
 
 function listenHttp1(){
-  const server = http.createServer((req, res) => {
+  const handler = (req, res) => {
 
     log('[HTTP1 SERVER]', 'Recieved request')
     log('[HTTP1 SERVER]', JSON.stringify({
@@ -78,11 +84,13 @@ function listenHttp1(){
     } else { end() }
 
 
-  });
+  };
+
+  const server = HTTPS_ENABLED? https.createServer(httpsOptions, handler) : http.createServer(handler);
   server.on('error', err => log('[HTTP1 SERVER]', err))
   server.listen(PORT);
 
-  log('[HTTP1 SERVER]', `HTTP1 Server listening on port ${PORT}`)
+  log('[HTTP1 SERVER]', `HTTP1 (${HTTPS_ENABLED?'https':'non-https'}) Server listening on port ${PORT}`)
 }
 
 function listenHttp2(){
