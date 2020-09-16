@@ -7,6 +7,7 @@ EXPOSE 5000
 USER node
 
 COPY ./src /server
+COPY ./data /server/data/
 
 WORKDIR /server
 
