@@ -12,14 +12,12 @@ const {
 } = http2.constants;
 
 
-const PORT = process.env.PORT || 5000
-const SERVICE_NAME = process.env.SERVICE_NAME || 'http2poc'
-const CALL_HTTP1_SERVICE = process.env.CALL_HTTP1_SERVICE || false
-const CALL_HTTP2_SERVICE = process.env.CALL_HTTP2_SERVICE || false
-const HTTP1_SERVICE_URL = process.env.HTTP1_SERVICE_URL || `http://localhost:${PORT}`
-const HTTP2_SERVICE_URL = process.env.HTTP2_SERVICE_URL || `http://localhost:${PORT}`
-const LISTEN_HTTP2 = (process.env.LISTEN_HTTP2 == 'true')
-const HTTPS_ENABLED = process.env.HTTPS_ENABLED == 'true'
+const DUM_SERVER_PORT = process.env.DUM_SERVER_PORT || 5000
+const DUM_SERVER_NAME = process.env.DUM_SERVER_NAME || 'dummy-server'
+const DUM_SERVER_HTTP_VERSION = process.env.DUM_SERVER_HTTP_VERSION || '1'
+const DUM_SERVER_HTTPS = process.env.DUM_SERVER_HTTPS == 'true'
+const DUM_EXT_HTTP1 = process.env.DUM_EXT_HTTP1 || ''
+const DUM_EXT_HTTP2 = process.env.DUM_EXT_HTTP2 || ''
 
 const httpsOptions = {
   key: fs.readFileSync('data/key.pem'),
@@ -33,12 +31,12 @@ function log(...msg){
   console.log(t(), ...msg)
 }
 
-const server = LISTEN_HTTP2 ? listenHttp2() : listenHttp1()
+const server = DUM_SERVER_HTTP_VERSION == '2' ? listenHttp2() : listenHttp1()
 
-if(CALL_HTTP1_SERVICE){
-  log('[HTTP1 CLIENT]', `calling http1 service in interval: ${HTTP1_SERVICE_URL}`)
+if(DUM_EXT_HTTP1){
+  log('[HTTP1 CLIENT]', `calling http1 service in interval: ${DUM_EXT_HTTP1}`)
   setInterval(() => {
-    log('[HTTP1 CLIENT]', 'calling http1 service', HTTP1_SERVICE_URL)
+    log('[HTTP1 CLIENT]', 'calling http1 service', DUM_EXT_HTTP1)
     callHttp1Service()
       .then(data => log('[HTTP1 CLIENT]', 'got http1 response', data))
       .catch(err => {
@@ -47,10 +45,10 @@ if(CALL_HTTP1_SERVICE){
       })
   }, 7000)
 }
-if(CALL_HTTP2_SERVICE){
-  log('[HTTP2 CLIENT]', `calling http2 service in interval: ${HTTP2_SERVICE_URL}`)
+if(DUM_EXT_HTTP2){
+  log('[HTTP2 CLIENT]', `calling http2 service in interval: ${DUM_EXT_HTTP2}`)
   setInterval(() => {
-    log('[HTTP2 CLIENT]', 'calling http2 service', HTTP2_SERVICE_URL)
+    log('[HTTP2 CLIENT]', 'calling http2 service', DUM_EXT_HTTP2)
     callHttp2Service()
       .then(data => log('[HTTP2 CLIENT]', 'got http2 response', data))
       .catch(err => {
@@ -86,11 +84,11 @@ function listenHttp1(){
 
   };
 
-  const server = HTTPS_ENABLED? https.createServer(httpsOptions, handler) : http.createServer(handler);
+  const server = DUM_SERVER_HTTPS? https.createServer(httpsOptions, handler) : http.createServer(handler);
   server.on('error', err => log('[HTTP1 SERVER]', err))
-  server.listen(PORT);
+  server.listen(DUM_SERVER_PORT);
 
-  log('[HTTP1 SERVER]', `HTTP1 (${HTTPS_ENABLED?'https':'non-https'}) Server listening on port ${PORT}`)
+  log('[HTTP1 SERVER]', `HTTP1 (${DUM_SERVER_HTTPS?'https':'non-https'}) Server listening on port ${DUM_SERVER_PORT}`)
 }
 
 function listenHttp2(){
@@ -120,18 +118,18 @@ function listenHttp2(){
       end()
     }
   });
-  server.listen(PORT);
+  server.listen(DUM_SERVER_PORT);
 
-  log('[HTTP2 SERVER]', `HTTP2 Server listening on port ${PORT}`)
+  log('[HTTP2 SERVER]', `HTTP2 Server listening on port ${DUM_SERVER_PORT}`)
 }
 
 async function callHttp1Service(){
 
-  const httpLib = HTTP1_SERVICE_URL.startsWith('https') ? https : http
+  const httpLib = DUM_EXT_HTTP1.startsWith('https') ? https : http
 
   return new Promise((resolve, reject) => {
 
-    const req = httpLib.get(HTTP1_SERVICE_URL, (res) => {
+    const req = httpLib.get(DUM_EXT_HTTP1, (res) => {
       log('[HTTP1 CLIENT]', `http1 response statusCode: ${res.statusCode}`)
 
       res.on('data', d => resolve(d.toString()))
@@ -147,13 +145,13 @@ async function callHttp2Service(){
   return new Promise((resolve, reject) => {
     let client
     try {
-      client = http2.connect(HTTP2_SERVICE_URL);
+      client = http2.connect(DUM_EXT_HTTP2);
     } catch(e){
       return reject(e)
     }
 
     const buffer = Buffer.from(JSON.stringify({
-      serviceName: SERVICE_NAME,
+      serviceName: DUM_SERVER_NAME,
       datetime: (new Date()).toISOString()
     }));
 
