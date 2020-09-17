@@ -92,7 +92,8 @@ function listenHttp1(){
 }
 
 function listenHttp2(){
-  const server = http2.createServer()
+  const server = DUM_SERVER_HTTPS? http2.createSecureServer(httpsOptions): http2.createServer()
+
   server.on('error', (err) => console.error(err));
 
   server.on('stream', (stream, headers) => {
@@ -120,7 +121,7 @@ function listenHttp2(){
   });
   server.listen(DUM_SERVER_PORT);
 
-  log('[HTTP2 SERVER]', `HTTP2 Server listening on port ${DUM_SERVER_PORT}`)
+  log('[HTTP2 SERVER]', `HTTP2 (${DUM_SERVER_HTTPS?'https':'non-https'}) Server listening on port ${DUM_SERVER_PORT}`)
 }
 
 async function callHttp1Service(){
